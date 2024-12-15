@@ -59,6 +59,8 @@ entity neorv32_iCEBreaker_BoardTop_MinimalBoot is
     iCEBreakerv10_LED_G_N            : out std_logic;
     -- PMOD1B
     iCEBreakerv10_PMOD1B_1           : out std_logic;
+    iCEBreakerv10_PMOD1B_2           : out std_logic;
+    --iCEBreakerv10_PMOD1B_3           : out std_logic;
     -- PMOD1A
     iCEBreakerv10_PMOD1A_1           : in std_logic
   );
@@ -137,8 +139,6 @@ architecture neorv32_iCEBreaker_BoardTop_MinimalBoot_rtl of neorv32_iCEBreaker_B
   signal wb_sel_m2s : std_ulogic_vector(3 downto 0);        -- Byte enable (array de vectores)
   signal wb_ack_s2m : std_ulogic_vector(1 downto 0);        -- One ack per slave
   signal wb_err_s2m : std_ulogic_vector(1 downto 0);        -- One err per slave
-
-  -- My periphs don't include these, I've created a couple of dummy signals
   signal wb_stall_s : std_ulogic_vector(1 downto 0) := (others => '0');
   signal wb_rty_s   : std_logic_vector(1 downto 0) := (others => '0');
 
@@ -151,16 +151,29 @@ architecture neorv32_iCEBreaker_BoardTop_MinimalBoot_rtl of neorv32_iCEBreaker_B
   -- -------------------------------------------------------------------------------------------
   -- Signals for the Master Interface in the interconnect
   -- -------------------------------------------------------------------------------------------
-  signal wb_cyc_m    : std_ulogic_vector(0 downto 0);
-  signal wb_lock_m   : std_ulogic_vector(0 downto 0);
-  signal wb_stb_m    : std_ulogic_vector(0 downto 0);
-  signal wb_adr_m    : std_ulogic_vector(31 downto 0); 
-  signal wb_we_m     : std_ulogic_vector(0 downto 0);
-  signal wb_dat_i_m  : std_ulogic_vector(31 downto 0); 
-  signal wb_dat_o_m  : std_ulogic_vector(31 downto 0);
-  signal wb_sel_m    : std_ulogic_vector(03 downto 0); 
+  signal wb_cyc_m    : std_ulogic_vector(1 downto 0)  := (others => '0');
+  signal wb_lock_m   : std_ulogic_vector(1 downto 0)  := (others => '0');
+  signal wb_stb_m    : std_ulogic_vector(1 downto 0)  := (others => '0');
+  signal wb_adr_m    : std_ulogic_vector(63 downto 0) := (others => '0'); 
+  signal wb_we_m     : std_ulogic_vector(1 downto 0)  := (others => '0');
+  signal wb_dat_i_m  : std_ulogic_vector(63 downto 0) := (others => '0'); 
+
+
+  signal wb_dat_o_m  : std_ulogic_vector(31 downto 0) := (others => '0');
+  
+  
+  signal wb_sel_m    : std_ulogic_vector(07 downto 0) := (others => '0'); 
   signal wb_ack_m    : std_ulogic;
   signal wb_err_m    : std_ulogic; 
+
+
+  -- DEBUG!!-------------------
+  signal DEBUG_LED_OUT_SIGNAL: std_logic;
+  -- DEBUG!!-------------------
+
+  -- DEBUG!!------------------
+  constant DEBUG_ADDR : std_logic_vector(31 downto 0) := x"90000010";
+  -- DEBUG!!------------------
 
 begin
 
@@ -194,7 +207,7 @@ begin
   -- -------------------------------------------------------------------------------------------
   opb_inst: entity neorv32.wb_IR_sensor
   generic map(
-    WB_ADDR_BASE => x"90000010",
+    WB_ADDR_BASE => x"90000010",    -- Every 16, another peripheral 
     WB_ADDR_SIZE => 4)
   port map(
 
@@ -223,13 +236,13 @@ begin
          dat_sz => 32,    -- Width of data bus
          nib_sz => 4,     -- Nibble size
          addr_sz => 32,   -- Width of address bus   
-         mstr_bits => 0,  -- Number of Wishbone Masters (in powers of 2)
+         mstr_bits => 1,  -- Number of Wishbone Masters (in powers of 2)
          slv_bits => 1    -- Number of Wishbone Slaves (in powers of 2)
     )
     port map(
 
-         clk_i  => std_ulogic(iCEBreakerv10_CLK),       -- Connect to system clock
-         rst_i => std_ulogic(iCEBreakerv10_BTN_N),      -- Connect to global reset
+         clk_i  => std_ulogic(iCEBreakerv10_CLK),
+         rst_i => std_ulogic(iCEBreakerv10_BTN_N),
 
          -- Whishbone Master Interface
          wb_mstr_cyc_i    => wb_cyc_m,
@@ -245,6 +258,10 @@ begin
          wb_mstr_stall_o  => open,
          wb_mstr_rty_o    => open,
 
+        -- DEBUG!!-------------------
+        DEBUG_LED_OUT => DEBUG_LED_OUT_SIGNAL,
+        -- DEBUG!!-------------------
+
          -- Slaves Interface
          wb_slv_cyc_o => wb_cyc_m2s,
          wb_slv_stb_o => wb_stb_m2s,
@@ -256,7 +273,7 @@ begin
          wb_slv_ack_i => wb_ack_s2m,
          wb_slv_err_i => wb_err_s2m,
          wb_slv_lock_o => open,
-         wb_slv_stall_i => wb_stall_s,    -- I had to use "dummy" signals
+         wb_slv_stall_i => wb_stall_s,
          wb_slv_rty_i => wb_rty_s
     );
 
@@ -346,7 +363,9 @@ begin
 
     -- Wishbone bus interface (available if MEM_EXT_EN = true) --
     wb_tag_o    => open,                            -- request tag    (SHOULDN'T BE NEEDED, OPTIONAL)
+
     wb_adr_o    => wb_adr_m(31 downto 0),           -- address
+
     wb_dat_i    => wb_dat_i_m(31 downto 0),         -- read data
     wb_dat_o    => wb_dat_o_m(31 downto 0),         -- write data
     wb_we_o     => wb_we_m(0),                      -- read/write
@@ -403,11 +422,27 @@ begin
     mext_irq_i  => '0'                           -- machine external interrupt
   );
 
+  --DEBUG : process
+  --begin
+      --wait until rising_edge(iCEBreakerv10_CLK);
+
+      -- DEBUG!!------------------
+      --if (wb_adr_m(31 downto 0) = DEBUG_ADDR) then
+      --    iCEBreakerv10_PMOD1B_2 <= '1';
+      --else
+      --    iCEBreakerv10_PMOD1B_2 <= '0';
+      --end if;
+      -- DEBUG!!-------------------
+
+  --end process;
+
   -- -------------------------------------------------------------------------------------------
   -- IO Connections
   -- -------------------------------------------------------------------------------------------
 
   iCEBreakerv10_PMOD1B_1 <= pwm_o;
+  iCEBreakerv10_PMOD1B_2 <= DEBUG_LED_OUT_SIGNAL;
+  --iCEBreakerv10_PMOD1B_3 <= wb_cyc_m(0);
   data_i <= iCEBreakerv10_PMOD1A_1;
   
 end architecture;
