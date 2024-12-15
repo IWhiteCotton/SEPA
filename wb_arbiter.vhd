@@ -9,7 +9,6 @@ generic (
 port (
     clk_i       : in  std_logic;
     rst_i       : in  std_logic;
-
     busy_i      : in  std_logic;
 
     gnt_o       : out std_logic_vector((mstr_bits - 1) downto 0)

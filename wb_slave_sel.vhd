@@ -40,12 +40,21 @@ port (
     err_i       : in  std_logic;
     stall_i     : in  std_logic;
 
+    -- DEBUG!!-------------------
+    DEBUG_LED_OUT : out std_logic;
+    -- DEBUG!!-------------------
+
     -- Slave Select
     slv_sel_o   : out std_logic_vector((slv_bits - 1) downto 0)
 );
 end wb_slave_sel;
 
 architecture Behavioral of wb_slave_sel is
+
+-- DEBUG!!------------------
+constant DEBUG_ADDR : std_logic_vector((addr_sz - 1) downto 0) := x"90000010";
+-- DEBUG!!------------------ 
+
 begin
     process
     begin
@@ -55,6 +64,17 @@ begin
         lock_o      <= lock_i;
         stb_o       <= stb_i;
         addr_o      <= addr_i((addr_sz - 1) downto 0);
+
+        -- DEBUG!!------------------
+        --if (addr_i((addr_sz - 1) downto 0) = DEBUG_ADDR) then
+        --    DEBUG_LED_OUT <= '1';
+        --else
+        --    DEBUG_LED_OUT <= '0';
+        --end if;
+        DEBUG_LED_OUT <= cyc_i;
+        -- DEBUG!!-------------------
+        
+
         we_o        <= we_i;
         slv_dat_o   <= mstr_dat_i;
         sel_o       <= sel_i;

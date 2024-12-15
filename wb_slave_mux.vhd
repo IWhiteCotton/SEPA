@@ -34,7 +34,7 @@ port (
     cyc_i       : in  std_logic;
     lock_i      : in  std_logic;
     stb_i       : in  std_logic;
-    adr_i       : in  std_logic_vector((addr_sz - 1) downto 0);
+    adr_i       : in  std_logic_vector((addr_sz - 1) downto 0);         -- OK
     we_i        : in  std_logic;
     mstr_dat_i  : in  std_logic_vector((dat_sz - 1) downto 0);
     sel_i       : in  std_logic_vector((nib_sz - 1) downto 0);
@@ -58,14 +58,24 @@ port (
     err_i       : in  std_logic_vector(((2 ** slv_bits) - 1) downto 0);
     stall_i     : in  std_logic_vector(((2 ** slv_bits) - 1) downto 0);
 
+    -- DEBUG!!-------------------
+    DEBUG_LED_OUT : out std_logic;
+    -- DEBUG!!-------------------
+
     -- Mux Select
     gnt_i       : in  std_logic_vector((slv_bits - 1) downto 0)
+
 );
 end wb_slave_mux;
 
 architecture Behavioral of wb_slave_mux is
     signal slv  : integer range 0 to ((2 ** slv_bits) - 1);
     signal stb  : std_logic_vector(((2 ** slv_bits) - 1) downto 0);
+
+    -- DEBUG!!------------------
+    constant DEBUG_ADDR : std_logic_vector((addr_sz - 1) downto 0) := x"90000010";
+    constant DEBUG_SENSOR_IN : std_logic_vector(31 downto 0) := x"00000001";
+    -- DEBUG!!------------------
 begin
     slv <= to_integer(unsigned(gnt_i));
 
@@ -123,4 +133,20 @@ begin
 
     -- Wishbone Spec demands that STALL is propagated w/o delay
     stall_o     <= stall_i(slv);
+
+    DEBUG : process
+    begin
+        wait until rising_edge(clk_i);
+
+        -- DEBUG!!------------------
+        if (slv_dat_i(63 downto 32) = DEBUG_SENSOR_IN) then
+            DEBUG_LED_OUT <= '1';
+        else
+            DEBUG_LED_OUT <= '0';
+        end if;
+        -- DEBUG!!-------------------
+
+    end process;
+
+
 end Behavioral;

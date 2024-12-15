@@ -4,25 +4,11 @@ use IEEE.NUMERIC_STD.all;
 
 entity wb_master_mux is
 generic (
-    --
-    -- Width of data bus
-    --
-    dat_sz      : natural := 8;
-
-    --
-    -- Nibble size
-    --
-    nib_sz      : natural := 8;
-
-    --
-    -- Width of address bus
-    --
-    addr_sz     : natural := 32;
     
-    --
-    -- Number of Wishbone Masters
-    --
-    mstr_bits   : natural := 2
+    dat_sz      : natural := 8;     -- Width of data bus
+    nib_sz      : natural := 8;     -- Nibble size
+    addr_sz     : natural := 32;    -- Width of address bus
+    mstr_bits   : natural := 2      -- Number of Wishbone Masters
 );
 port (
     clk_i       : in  std_logic;
@@ -62,7 +48,12 @@ port (
     
     -- Mux Select
     gnt_i       : in  std_logic_vector((mstr_bits - 1) downto 0);
-    busy_o      : out std_logic
+    busy_o      : out std_logic;
+
+    -- DEBUG!!-------------------
+    DEBUG_LED_OUT : out std_logic
+    -- DEBUG!!-------------------
+
 );
 end wb_master_mux;
 
@@ -76,8 +67,13 @@ architecture Behavioral of wb_master_mux is
     signal we       : std_logic;
     signal dat_m2s  : std_logic_vector(dat_m2s_o'range);
     signal sel      : std_logic_vector(sel_o'range);
+
+    -- DEBUG!!------------------
+    constant DEBUG_ADDR : std_logic_vector((addr_sz - 1) downto 0) := x"90000010";
+    -- DEBUG!!------------------ 
+
 begin
-    mstr         <= to_integer(unsigned(gnt_i));
+    mstr         <= to_integer(unsigned(gnt_i));        -- ESTO PUEDE VALER 0 o 1
 
     cyc         <= cyc_i(mstr);
     lock        <= lock_i(mstr);
@@ -96,6 +92,16 @@ begin
         stb_o       <= stb;
 
         adr_o       <= adr;
+
+
+        -- DEBUG!!------------------
+        if (adr((addr_sz - 1) downto 0) = DEBUG_ADDR) then
+            DEBUG_LED_OUT <= '1';
+        else
+            DEBUG_LED_OUT <= '0';
+        end if;
+        -- DEBUG!!-------------------
+
         we_o        <= we;
         dat_m2s_o   <= dat_m2s;
         sel_o       <= sel;
@@ -126,5 +132,6 @@ begin
 
     stall_o <= stall_i;
     busy_o  <= cyc;
+
 end Behavioral;
 

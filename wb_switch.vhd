@@ -38,8 +38,11 @@ port (
     --
     -- Whishbone Master Interface
     --
-    -- The Signal Directions are inverted as they are coming from/going to
-    -- the masters into/from the switch/arbiter logic.
+    -- The Signal Directions are inverted as they are going to
+    -- the masters from the arbiter logic.
+    --
+    -- The Signal Directions are inverted as they are coming from
+    -- the masters into the switch.
     --
     wb_mstr_cyc_i       : in  std_logic_vector(((2 ** mstr_bits) - 1) downto 0);
     wb_mstr_lock_i      : in  std_logic_vector(((2 ** mstr_bits) - 1) downto 0);
@@ -56,6 +59,11 @@ port (
     wb_mstr_stall_o     : out std_logic;
     wb_mstr_err_o       : out std_logic;
     wb_mstr_rty_o       : out std_logic;
+
+
+    -- DEBUG!!-------------------
+    DEBUG_LED_OUT : out std_logic;
+    -- DEBUG!!-------------------
 
     --
     -- Whishbone Slave Interface
@@ -109,6 +117,7 @@ architecture Behavioral of wb_switch is
         cyc_i       : in  std_logic;
         lock_i      : in  std_logic;
         stb_i       : in  std_logic;
+        
         addr_i      : in  std_logic_vector((addr_sz - 1) downto 0);
         we_i        : in  std_logic;
         mstr_dat_i  : in  std_logic_vector((dat_sz - 1) downto 0);
@@ -118,6 +127,10 @@ architecture Behavioral of wb_switch is
         rty_o       : out std_logic;
         err_o       : out std_logic;
         stall_o     : out std_logic;
+
+        -- DEBUG!!-------------------
+        DEBUG_LED_OUT : out std_logic;
+        -- DEBUG!!-------------------
 
         -- Wishbone Master Interface Implementation
         cyc_o       : out std_logic;
@@ -197,6 +210,10 @@ architecture Behavioral of wb_switch is
         err_i       : in  std_logic;
         stall_i     : in  std_logic;
 
+        -- DEBUG!!-------------------
+        DEBUG_LED_OUT : out std_logic;
+        -- DEBUG!!-------------------
+
         -- Mux Select
         gnt_i       : in  std_logic_vector((mstr_bits - 1) downto 0);
         busy_o      : out std_logic
@@ -258,6 +275,10 @@ architecture Behavioral of wb_switch is
         err_i       : in  std_logic_vector(((2 ** slv_bits) - 1) downto 0);
         stall_i     : in  std_logic_vector(((2 ** slv_bits) - 1) downto 0);
 
+        -- DEBUG!!-------------------
+        DEBUG_LED_OUT : out std_logic;
+        -- DEBUG!!-------------------
+
         -- Mux Select
         gnt_i       : in  std_logic_vector((slv_bits - 1) downto 0)
     );
@@ -294,6 +315,11 @@ architecture Behavioral of wb_switch is
     signal slave_sel    : std_logic_vector((slv_bits - 1) downto 0);
 
     signal busy         : std_logic;
+
+    -- DEBUG!!------------------
+    constant DEBUG_ADDR : std_logic_vector((addr_sz - 1) downto 0) := x"90000010";
+    -- DEBUG!!------------------
+
 begin
     arbiter : wb_arbiter
     generic map (
@@ -349,7 +375,11 @@ begin
 
         -- Mux Select
         gnt_i       => master_gnt,
-        busy_o      => busy
+        busy_o      => busy,
+
+        -- DEBUG!!-------------------
+        DEBUG_LED_OUT => open
+        -- DEBUG!!-------------------
     );
 
     translator : wb_slave_sel
@@ -371,6 +401,10 @@ begin
         we_i        => master_we,
         mstr_dat_i  => master_m2s,
         sel_i       => master_sel,
+
+        -- DEBUG!!-------------------
+        DEBUG_LED_OUT => DEBUG_LED_OUT,
+        -- DEBUG!!-------------------
         
         mstr_dat_o  => master_s2m,
         ack_o       => master_ack,
@@ -435,8 +469,27 @@ begin
         err_i       => wb_slv_err_i,
         rty_i       => wb_slv_rty_i,
 
+        -- DEBUG!!-------------------
+        DEBUG_LED_OUT => open,
+        -- DEBUG!!-------------------
+
         -- Mux Select
         gnt_i       => slave_sel
     );
+    
+    --DEBUG : process
+    --begin
+    --    wait until rising_edge(clk_i);
+
+        -- DEBUG!!------------------
+        --if (wb_mstr_adr_i ((addr_sz - 1) downto 0) = DEBUG_ADDR) then
+        --    DEBUG_LED_OUT <= '1';
+        --else
+        --    DEBUG_LED_OUT <= '0';
+        --end if;
+        -- DEBUG!!-------------------
+
+    --end process;
+
 end Behavioral;
 
